@@ -21,12 +21,6 @@ public class SecurityConfig {
     filterChain(HttpSecurity http) throws
     Exception {
         http
-            .authorizeHttpRequests(auth -> auth
-
-                .requestMatchers("/api/public/**")
-                .anyRequest ().authenticated()
-                .permitAll()
-            )
             .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> {}))
             .headers(headers -> headers
                 .xssProtection(xss -> xss.headerValue(XXssProtectionHeaderWriter.HeaderValue.ENABLED_MODE_BLOCK))
