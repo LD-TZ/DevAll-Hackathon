@@ -26,7 +26,7 @@ public class RootCauseAgent {
                     ChatHistory history = new ChatHistory(
                             "You are an Azure SRE Agent. Analyze the logs and correlate with the provided historical data. Identify the exact root cause of the failure. Output only the technical root cause."
                     );
-                    history.addUserMessage("Logs:\n" + logs + "\nHistorical Context:\n" + historicalContext);
+                    history.addUserMessage("Logs:\n" + logs + "\nHistorical Context:\n" + historicalData);
                     return chatCompletionService.getChatMessageContentsAsync(history, kernel, null)
                             .map(messages -> messages.get(0).getContent());
                 });

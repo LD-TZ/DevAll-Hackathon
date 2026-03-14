@@ -1,43 +1,31 @@
 package com.devall.agenticdevops.memory;
 
-import com.microsoft.semantickernel.memory.MemoryQueryResult;
-import com.microsoft.semantickernel.memory.SemanticTextMemory;
-import com.microsoft.semantickernel.memory.VolatileMemoryStore;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
-import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class SemanticMemoryService {
 
-    private final SemanticTextMemory memory;
-    private final String incidentCollection = "resolved_incidents";
-
-    public SemanticMemoryService() {
-        this.memory = SemanticTextMemory.builder()
-                .withMemoryStore(new VolatileMemoryStore())
-                .build();
-    }
+    private final Map<String, String> incidentMemory = new ConcurrentHashMap<>();
 
     public Mono<String> findSimilarIncidentResolution(String errorSignature) {
-        return memory.searchAsync(incidentCollection, errorSignature, 1, 0.85f, true)
-                .map(results -> {
-                    List<MemoryQueryResult> list = results.block();
-                    if (list != null && !list.isEmpty()) {
-                        return list.get(0).getMetadata().getText();
-                    }
-                    return "NO_MATCH";
-                });
+        return Mono.fromCallable(() -> {
+            for (Map.Entry<String, String> entry : incidentMemory.entrySet()) {
+                if (errorSignature.contains(entry.getKey()) || entry.getKey().contains(errorSignature)) {
+                    return entry.getValue();
+                }
+            }
+            return "NO_MATCH";
+        });
     }
 
     public Mono<Void> storeSuccessfulResolution(String incidentId, String errorSignature, String appliedFix) {
-        return memory.saveInformationAsync(
-                incidentCollection,
-                appliedFix,
-                incidentId,
-                errorSignature,
-                null
-        );
+        return Mono.fromRunnable(() -> {
+            String signatureKey = errorSignature.length() > 500 ? errorSignature.substring(0, 500) : errorSignature;
+            incidentMemory.put(signatureKey, appliedFix);
+        });
     }
 }
