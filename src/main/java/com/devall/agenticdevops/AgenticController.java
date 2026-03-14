@@ -10,10 +10,14 @@ public class AgenticController {
 
     private final DevOpsAgentService devOpsAgentService;
     private final DataAgentService dataAgentService;
+    private final ExecutionEngineService executionEngineService;
 
-    public AgenticController(DevOpsAgentService devOpsAgentService, DataAgentService dataAgentService) {
+    public AgenticController(DevOpsAgentService devOpsAgentService, 
+                             DataAgentService dataAgentService,
+                             ExecutionEngineService executionEngineService) {
         this.devOpsAgentService = devOpsAgentService;
         this.dataAgentService = dataAgentService;
+        this.executionEngineService = executionEngineService;
     }
 
     @PostMapping("/webhook/github")
@@ -50,8 +54,17 @@ public class AgenticController {
                 .map(ecosystemJson -> {
                     System.out.println("\n--- GENERATED ETL ---");
                     System.out.println(ecosystemJson);
-                    System.out.println("-------------------------------\n");
+                    System.out.println("---------------------\n");
                     return ecosystemJson;
                 });
+    }
+
+    @PostMapping("/execute")
+    public Map<String, Object> executeCode(@RequestBody Map<String, String> request) {
+        String originalCode = request.getOrDefault("originalCode", "");
+        String newCode = request.getOrDefault("newCode", "");
+        String type = request.getOrDefault("pipelineType", "Data");
+
+        return executionEngineService.executeAndAnalyze(originalCode, newCode, type);
     }
 }
