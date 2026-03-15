@@ -1,13 +1,10 @@
 package com.devall.agenticdevops;
 
-import com.azure.ai.openai.OpenAIAsyncClient;
-import com.azure.ai.openai.OpenAIClientBuilder;
-import com.azure.core.credential.KeyCredential;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.microsoft.semantickernel.Kernel;
 import com.microsoft.semantickernel.services.chatcompletion.ChatCompletionService;
 import com.microsoft.semantickernel.services.chatcompletion.ChatHistory;
-import com.microsoft.semantickernel.aiservices.openai.chatcompletion.OpenAIChatCompletion;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
@@ -15,43 +12,30 @@ import reactor.core.publisher.Mono;
 public class DataAgentService {
 
     private final ChatCompletionService chatCompletionService;
+    private final ObjectMapper objectMapper;
 
-    public DataAgentService(
-            @Value("${ai.azure.openai.endpoint}") String endpoint,
-            @Value("${ai.azure.openai.api-key}") String apiKey,
-            @Value("${ai.azure.openai.deployment-name}") String deploymentName) {
-
-        OpenAIAsyncClient client = new OpenAIClientBuilder()
-                .endpoint(endpoint)
-                .credential(new KeyCredential(apiKey))
-                .buildAsyncClient();
-
-        this.chatCompletionService = OpenAIChatCompletion.builder()
-                .withOpenAIAsyncClient(client)
-                .withModelId(deploymentName)
-                .build();
+    public DataAgentService(ChatCompletionService chatCompletionService) {
+        this.chatCompletionService = chatCompletionService;
+        this.objectMapper = new ObjectMapper();
     }
 
     public Mono<String> generateEnterpriseEtl(String sourceFormat, String sampleData, String targetDestination) {
-        System.out.println("DevAll AI generating - ETL for destination: " + targetDestination);
-
         ChatHistory chatHistory = new ChatHistory(
-                "You are an elite Enterprise Data Architect specialized in the Microsoft ecosystem. " +
-                "Your task is to generate fully functional, deployable Python ETL pipelines. " +
+                "You are an elite Enterprise Data Architect. Your task is to generate fully functional, resilient Python ETL pipelines. " +
                 "MANDATORY LOGIC: " +
-                "1. If the target is 'Power BI', you MUST wrap the data transformation in a FastAPI application, expose an endpoint returning a JSON array of records, and include logic to parse the source format (JSON/XML/CSV) into a Pandas DataFrame first. " +
-                "2. If the target is 'Azure Data Lake' or 'Synapse', you MUST use the official azure-storage-file-datalake SDK. " +
-                "3. You MUST output a strict JSON object with exactly 4 keys: " +
-                "'appPy' (the complete, runnable Python code), " +
-                "'requirementsTxt' (all pip dependencies), " +
-                "'dockerfile' (a Dockerfile ready for Azure App Service/Container Apps), " +
-                "'integrationSteps' (step-by-step instructions on how to consume this in the target Microsoft tool). " +
-                "Do NOT use markdown code blocks like ```json around your response. Return pure JSON." +
-                "Do NOT USE EMOJIS or ANY OTHER UNPROFESSIONAL LANGUAGE."
+                "1. SYNCHRONOUS EXECUTION: The script must fetch data, print the JSON array to stdout, and exit. Do not use web servers. " +
+                "2. ENCODING: You MUST include `import sys` and `sys.stdout.reconfigure(encoding='utf-8')` at the top. " +
+                "3. API RESILIENCE: Safely check if the response was successful. Extract arrays safely using `.get('data', [])` or similar logic. " +
+                "4. STRICT POLARS USAGE: You MUST use 'polars' (import polars as pl). IT IS STRICTLY FORBIDDEN TO USE 'pandas'. " +
+                "5. DATA PROCESSING: Convert the extracted array to a DataFrame using `df = pl.DataFrame(data)`. " +
+                "6. EXACT OUTPUT SYNTAX: You MUST print the final output using EXACTLY: `print(df.write_json())`. " +
+                "7. AUTHENTICATION HANDLING: If the API documentation requires an API key, Auth-Key, or token, check if the user provided a real one in the input. If they did NOT, you MUST NOT use fake placeholders like 'YOUR-KEY-HERE'. Instead, write a script that bypasses the requests library entirely and exactly does this: `df = pl.DataFrame([{'DevAll_System_Alert': 'Authentication required. Please append your API Key to the input box.'}]); print(df.write_json())` and exits. " +
+                "8. You MUST output a strict JSON object with exactly 4 keys: 'appPy', 'requirementsTxt', 'dockerfile', 'integrationSteps'. " +
+                "Do NOT use markdown blocks like ```json around your response. Return pure JSON."
         );
 
         String prompt = String.format(
-                "Source Format: %s\nSample Data: %s\nTarget Destination: %s\nGenerate the complete pipeline ecosystem.",
+                "Source Format: %s\nRaw Input Data / Endpoint / Docs: %s\nTarget Destination: %s\nGenerate the complete pipeline ecosystem.",
                 sourceFormat, sampleData, targetDestination
         );
 
@@ -59,9 +43,16 @@ public class DataAgentService {
 
         return chatCompletionService.getChatMessageContentsAsync(chatHistory, Kernel.builder().build(), null)
                 .map(messages -> {
-                    String aiResponse = messages.get(0).getContent();
-                    System.out.println("ETL system generated Successfully.");
-                    return aiResponse;
+                    String rawJson = messages.get(0).getContent();
+                    try {
+                        JsonNode node = objectMapper.readTree(rawJson);
+                        if (node.has("appPy")) {
+                            return node.get("appPy").asText();
+                        }
+                        return rawJson;
+                    } catch (Exception e) {
+                        return rawJson;
+                    }
                 });
     }
 }

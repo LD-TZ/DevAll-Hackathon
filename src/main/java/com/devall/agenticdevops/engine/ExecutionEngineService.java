@@ -1,4 +1,4 @@
-package com.devall.agenticdevops;
+package com.devall.agenticdevops.engine;
 
 import com.github.difflib.DiffUtils;
 import com.github.difflib.patch.Patch;

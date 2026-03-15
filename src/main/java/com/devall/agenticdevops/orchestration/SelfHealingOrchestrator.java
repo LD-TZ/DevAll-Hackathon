@@ -7,8 +7,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class SelfHealingOrchestrator {
@@ -20,6 +23,8 @@ public class SelfHealingOrchestrator {
     private final ReviewerAgent reviewerAgent;
     private final SemanticMemoryService semanticMemoryService;
     private final ObjectMapper objectMapper;
+
+    private final Map<String, Map<String, Object>> incidentRegistry = new ConcurrentHashMap<>();
 
     private static final int MAX_RETRIES = 3;
 
@@ -39,10 +44,31 @@ public class SelfHealingOrchestrator {
         this.objectMapper = new ObjectMapper();
     }
 
-    public Mono<Map<String, Object>> executeHealingWorkflow(String repoFullName, String runId) {
+    public List<Map<String, Object>> getActiveIncidents() {
+        return new ArrayList<>(incidentRegistry.values());
+    }
+
+    public Mono<Map<String, Object>> stageHealingWorkflow(String repoFullName, String runId) {
         Map<String, Object> state = new HashMap<>();
-        state.put("runId", runId);
-        state.put("repository", repoFullName);
+        state.put("id", runId);
+        state.put("repo", repoFullName);
+        state.put("error", "Pending analysis of GitHub Action logs...");
+        state.put("time", "Just now");
+        state.put("status", "STAGED");
+        
+        incidentRegistry.put(runId, state);
+        return Mono.just(state);
+    }
+
+    public Mono<Map<String, Object>> executeStagedWorkflow(String runId) {
+        if (!incidentRegistry.containsKey(runId)) {
+            return Mono.just(Map.of("status", "NOT_FOUND"));
+        }
+
+        Map<String, Object> state = incidentRegistry.get(runId);
+        String repoFullName = (String) state.get("repo");
+
+        state.put("status", "IN_PROGRESS");
 
         String logs = logAnalyzerAgent.analyzeLogs(repoFullName, runId);
         if ("ERROR_FETCHING_LOGS".equals(logs)) {
@@ -50,8 +76,13 @@ public class SelfHealingOrchestrator {
             return Mono.just(state);
         }
 
+        state.put("error", "Root cause analysis in progress...");
+
         return rootCauseAgent.determineRootCause(logs)
-                .flatMap(rootCause -> processRetryLoop(repoFullName, logs, rootCause, 1, "", state));
+                .flatMap(rootCause -> {
+                    state.put("error", rootCause);
+                    return processRetryLoop(repoFullName, logs, rootCause, 1, "", state);
+                });
     }
 
     private Mono<Map<String, Object>> processRetryLoop(String repoFullName, String logs, String rootCause, int attempt, String feedbackContext, Map<String, Object> state) {
@@ -78,20 +109,20 @@ public class SelfHealingOrchestrator {
                                                         state.put("status", "RESOLVED");
                                                         state.put("appliedFix", correctedCode);
                                                         return semanticMemoryService.storeSuccessfulResolution(
-                                                                (String) state.get("runId"),
+                                                                (String) state.get("id"),
                                                                 rootCause,
                                                                 correctedCode
                                                         ).thenReturn(state);
                                                     } else {
-                                                        return processRetryLoop(repoFullName, logs, rootCause, attempt + 1, "Security validation rejected the fix.", state);
+                                                        return processRetryLoop(repoFullName, logs, rootCause, attempt + 1, "Security rejected fix", state);
                                                     }
                                                 });
                                     } else {
-                                        return processRetryLoop(repoFullName, logs, rootCause, attempt + 1, "CI workflow failed on attempt " + attempt, state);
+                                        return processRetryLoop(repoFullName, logs, rootCause, attempt + 1, "CI failed", state);
                                     }
                                 });
                     } catch (Exception e) {
-                        return processRetryLoop(repoFullName, logs, rootCause, attempt + 1, "JSON Parsing Error", state);
+                        return processRetryLoop(repoFullName, logs, rootCause, attempt + 1, "Parsing error", state);
                     }
                 });
     }
