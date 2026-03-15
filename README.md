@@ -1,93 +1,113 @@
-# AI Dev Days Hackathon Project
+# DevAll: Agentic DevOps System
 
 [![Hackathon](https://img.shields.io/badge/Hackathon-AI%20Dev%20Days-blue)](https://developer.microsoft.com/)
 [![Azure](https://img.shields.io/badge/Cloud-Microsoft%20Azure-0078D4)](https://azure.microsoft.com/)
-[![AI](https://img.shields.io/badge/AI-Microsoft%20AI%20Services-5C2D91)](https://learn.microsoft.com/azure/ai-services/)
+[![AI](https://img.shields.io/badge/AI-Azure%20OpenAI-5C2D91)](https://learn.microsoft.com/azure/ai-services/)
+[![Framework](https://img.shields.io/badge/Framework-Spring%20Boot%203-6DB33F)]()
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Status](https://img.shields.io/badge/Status-Prototype-orange)]()
 
 ## Overview
 
-This project was developed as part of the **AI Dev Days Hackathon**, focusing on building a practical AI-powered solution that addresses a real-world problem using Microsoft AI technologies and cloud infrastructure.
+This project was developed as part of the **AI Dev Days Hackathon**, focusing on building a practical AI-powered solution that addresses real-world infrastructure and data engineering bottlenecks using Microsoft AI technologies.
 
-The goal of the project is to demonstrate how modern AI services, cloud platforms, and developer tooling can be combined to create intelligent applications capable of automating processes, extracting insights, and supporting decision-making.
+**DevAll** is an autonomous Site Reliability Engineering (SRE) and Data Orchestration platform. It utilizes a multi-agent Large Language Model (LLM) swarm to monitor infrastructure, diagnose pipeline failures, synthesize code patches, and deploy validated fixes without human intervention. 
 
-The solution integrates **Microsoft AI services, cloud infrastructure, and developer tools** to build a functional prototype that showcases how AI agents and cloud services can be orchestrated to solve meaningful problems in a scalable way.
-
-The repository contains the full implementation, architecture description, and supporting documentation required to understand and evaluate the project.
+The repository contains the full implementation, API definitions, and supporting documentation required to understand and evaluate the project.
 
 ---
 
 ## Problem Statement
 
-Organizations increasingly rely on large volumes of data and complex workflows. However, extracting actionable insights and automating decision-making processes remains a challenge due to fragmented systems, manual operations, and the lack of accessible intelligent tooling.
+Organizations increasingly rely on complex CI/CD pipelines and large-scale data workflows. However, when these pipelines fail, resolving them requires manual log analysis, root-cause diagnosis, code patching, and re-testing. This results in high Mean Time To Recovery (MTTR), fragmented systems, and manual toil for SRE and DevOps teams.
 
-This project addresses that challenge by providing an AI-driven solution capable of processing information, assisting users through automated workflows, and enabling more efficient interaction with data and services.
-
-The solution is designed for developers, data practitioners, and organizations seeking to leverage AI in practical scenarios while maintaining a clear and extensible architecture.
+DevAll addresses this challenge by providing an AI-driven, self-healing system capable of intercepting failure events, diagnosing logs against historical vector memory, and autonomously deploying validated fixes, keeping human engineers strictly in a supervisory "approval" role.
 
 ---
 
 ## Solution
 
-The project implements an AI-powered system that combines cloud services, AI capabilities, and developer tooling to provide a structured workflow for processing information and interacting with intelligent services.
+The project implements a Reactive Micro-Kernel system that combines cloud services, AI capabilities, and developer tooling to provide a structured, autonomous workflow.
 
 Key capabilities include:
-
-- Intelligent processing and analysis using AI services
-- Integration with cloud infrastructure for scalable execution
-- Modular architecture that allows future expansion
-- A working prototype demonstrating the full interaction flow
-
-The solution is designed to be transparent and reproducible, allowing reviewers and developers to understand both the technical implementation and the architectural decisions behind the system.
+- **Autonomous SRE Swarm:** A multi-agent array that reads logs, finds root causes, patches code, and validates fixes via CI/CD.
+- **Enterprise ETL Forge:** Generates production-ready Polars data pipelines from raw JSON schemas synchronously.
+- **Late Execution Orchestration:** Maintains an in-memory Job Registry allowing human operators to manually approve and trigger staged AI fixes.
+- **Semantic Memory:** Records successful incident resolutions to a vector-like cache, allowing the system to recall and apply historical fixes to matching error signatures.
 
 ---
 
 ## Technologies Used
 
-The project leverages the Microsoft AI ecosystem and related developer tools.
+The project leverages the Microsoft AI ecosystem and modern backend frameworks:
 
-Core technologies include:
-
-- **Microsoft Azure**
-- **Azure AI Services**
-- **Microsoft AI Foundry**
-- **Azure Model Context Protocol (MCP)**
-- **Microsoft Agent Framework**
-- **GitHub Copilot**
-- **Cloud APIs and AI inference services**
-
-Additional technologies may include:
-
-- Python / Node.js runtime environments
-- REST APIs
-- Cloud-based AI inference pipelines
-- Data processing and orchestration components
+- **Microsoft Semantic Kernel** (for LLM orchestration)
+- **Azure OpenAI** (Inference services)
+- **Spring Boot 3.2.x** (Java backend runtime)
+- **Project Reactor** (Non-blocking asynchronous operations / WebFlux)
+- **GitHub API & Webhooks** (CI/CD triggers and Git tree manipulation)
+- **Python / Polars** (Target generation language for the ETL Forge)
+- **Server-Sent Events (SSE)** (Real-time telemetry streaming)
 
 ---
 
 ## Architecture
 
-The architecture is designed to demonstrate how AI components and cloud services interact in a modern application stack.
+The architecture is designed to demonstrate how Multi-Agent AI components interact securely within a modern application stack.
 
-Main architectural components include:
+![Automated self-healing software architecture diagram](docs/architecture-diagram.png)
 
-1. **User Interface or API Layer**  
-   Handles user interaction and input processing.
+### 1. Core Components Layer
+* **AgenticController:** The primary REST interface handling GitHub webhooks, manual pipeline triggers, and Server-Sent Events (SSE) for kernel log streaming.
+* **SelfHealingOrchestrator:** The central state machine managing the lifecycle of an incident. It coordinates the Swarm Array and maintains an in-memory Job Registry for late execution.
+* **ExecutionEngineService:** A secure sandbox execution layer that evaluates AI-generated Python/Polars patches, computes AST diffs, and extracts performance metrics (execution time, memory allocation).
+* **SemanticMemoryService:** An in-memory cache that records successful incident resolutions to apply historical fixes to matching error signatures.
+* **DataAgentService:** A specialized generative agent configured to output strict, synchronous, and resilient Polars ETL scripts.
 
-2. **Application Logic Layer**  
-   Manages workflows, orchestration, and communication between services.
+### 2. The Swarm Array (Agents)
+* **LogAnalyzerAgent:** Interfaces with the `GitHubIntegrationClient` to extract workflow execution logs.
+* **RootCauseAgent:** Correlates logs with the `SemanticMemoryService` to identify technical root causes.
+* **CodeFixAgent:** Generates Abstract Syntax Tree (AST) patches and outputs structured JSON containing the corrected code.
+* **ValidatorAgent:** Commits the patch to a temporary branch and polls the GitHub Actions CI/CD pipeline to verify build success.
+* **ReviewerAgent:** Conducts a security audit of the proposed fix. Upon approval, it authors the Markdown description and opens a Pull Request.
 
-3. **AI Services Layer**  
-   Uses Microsoft AI services for intelligent processing and decision support.
+---
 
-4. **Cloud Infrastructure Layer**  
-   Deploys the system using Azure services to enable scalability and reliability.
+## API Documentation
 
-An architecture diagram is included in the repository to illustrate the complete flow between these components.
+### Webhook & Incident Management
+| Endpoint | Method | Payload | Description |
+| :--- | :--- | :--- | :--- |
+| `/api/webhook` | `POST` | GitHub `workflow_run` event | Ingress point for CI failures. Stages the workflow for late execution. |
+| `/api/incidents` | `GET` | None | Retrieves all active and staged incidents from the registry. |
+| `/api/execute/staged/{runId}` | `POST` | None | Triggers the autonomous swarm execution for a specific staged incident. |
+
+### Telemetry & Diagnostics
+| Endpoint | Method | Payload | Description |
+| :--- | :--- | :--- | :--- |
+| `/api/system/logs` | `GET` | None | Streaming endpoint (`text/event-stream`) for real-time kernel activity. |
+| `/api/execute/preview` | `POST` | `{ originalCode, newCode, pipelineType }` | Executes an AI patch in the local sandbox and returns performance metrics. |
+
+### Data Orchestration
+| Endpoint | Method | Payload | Description |
+| :--- | :--- | :--- | :--- |
+| `/api/data/generate-etl` | `POST` | `{ sourceFormat, sampleData, targetDestination }` | Synthesizes a Polars Python script based on raw input schemas. |
+
+---
+
+## Process Documentation: Self-Healing Lifecycle
+
+The system handles failures through a strict, multi-step orchestration process:
+
+1. **Detection & Staging:** A failure in the main repository triggers the GitHub Webhook. The `SelfHealingOrchestrator` registers the incident as `STAGED`.
+2. **Manual Approval (Late Execution):** An engineer triggers the execution via the REST API or UI.
+3. **Root Cause Analysis:** The orchestrator dispatches the `LogAnalyzerAgent` to fetch traces, passing them to the `RootCauseAgent` for analysis against historical memory.
+4. **Synthesis & Retry Loop:** The `CodeFixAgent` generates a patch. If validation fails, the orchestrator triggers a retry loop (up to 3 attempts) with feedback context.
+5. **Validation & Review:** The `ValidatorAgent` runs the code through the CI pipeline. The `ReviewerAgent` performs a final security check and merges the code via Pull Request.
+6. **Memory Storage:** The successful fix is committed to the `SemanticMemoryService` for future recall.
 
 ---
 
 ## Demo
 
-A demonstration video showing the system in action is available here:
+A demonstration video showing the system in action is available here: 
