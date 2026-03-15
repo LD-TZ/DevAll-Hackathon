@@ -1,0 +1,7 @@
+node_modules
+dist
+.env
+application.properties
+Main.java
+.DS_Store
+.gemini
