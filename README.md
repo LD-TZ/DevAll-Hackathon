@@ -231,5 +231,5 @@ DevAll resolves incidents through a structured multi-stage workflow.
 
 A demonstration video showing the system in action is available here:
 
-**[Demo Video Link](https://youtu.be/RISRBvQAXKE?si=htzBtZQxuaaiAvWp)**
+**[Demo Video Link](https://youtu.be/CK3hXHAj8NU?si=FxDLm_1mZtxuHd_1)**
 
